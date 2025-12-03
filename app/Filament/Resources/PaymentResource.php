@@ -131,6 +131,6 @@ class PaymentResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::where('status', PaymentStatus::PENDING)->count();
+        return (string) Payment::where('status', PaymentStatus::PENDING)->count();
     }
 }

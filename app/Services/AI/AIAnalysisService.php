@@ -29,7 +29,10 @@ class AIAnalysisService
 
             /** @var array<string, mixed> $json */
             $json = $response->json();
-            $content = $json['content'][0]['text'] ?? null;
+
+            $contentArray = $json['content'] ?? [];
+            $firstContent = is_array($contentArray) && isset($contentArray[0]) ? $contentArray[0] : [];
+            $content = is_array($firstContent) && isset($firstContent['text']) ? $firstContent['text'] : null;
 
             if (! $content || ! is_string($content)) {
                 throw new AIAnalysisException('Empty response from AI');

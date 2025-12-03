@@ -31,7 +31,7 @@ return new class extends Migration
 
             // Payment
             $table->boolean('is_paid')->default(false);
-            $table->string('stripe_payment_id')->nullable();
+            $table->string('paddle_payment_id')->nullable();
             $table->timestamp('paid_at')->nullable();
 
             // Tracking

@@ -25,8 +25,11 @@ class ScoreCalculatorService
         $weightedSum = 0.0;
 
         foreach (self::WEIGHTS as $category => $weight) {
-            $score = $result->categories[$category]['score'] ?? 0;
-            $weightedSum += (int) $score * $weight;
+            $categoryData = $result->categories[$category] ?? [];
+            $score = isset($categoryData['score']) && is_numeric($categoryData['score'])
+                ? (int) $categoryData['score']
+                : 0;
+            $weightedSum += $score * $weight;
         }
 
         return (int) round($weightedSum);
@@ -38,12 +41,23 @@ class ScoreCalculatorService
     public function extractCategoryScores(AnalysisResultDTO $result): array
     {
         return [
-            'profile' => (int) ($result->categories['profile_completeness']['score'] ?? 0),
-            'projects' => (int) ($result->categories['project_quality']['score'] ?? 0),
-            'consistency' => (int) ($result->categories['contribution_consistency']['score'] ?? 0),
-            'technical' => (int) ($result->categories['technical_signals']['score'] ?? 0),
-            'community' => (int) ($result->categories['community_engagement']['score'] ?? 0),
+            'profile' => $this->getCategoryScore($result->categories, 'profile_completeness'),
+            'projects' => $this->getCategoryScore($result->categories, 'project_quality'),
+            'consistency' => $this->getCategoryScore($result->categories, 'contribution_consistency'),
+            'technical' => $this->getCategoryScore($result->categories, 'technical_signals'),
+            'community' => $this->getCategoryScore($result->categories, 'community_engagement'),
         ];
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $categories
+     */
+    private function getCategoryScore(array $categories, string $key): int
+    {
+        $category = $categories[$key] ?? [];
+        $score = $category['score'] ?? 0;
+
+        return is_numeric($score) ? (int) $score : 0;
     }
 
     public function normalizeScore(int $score): int

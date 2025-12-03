@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\ScoreLevel;
+use Database\Factories\AnalysisFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property array<string, mixed>|null $github_data
  * @property array<string, mixed>|null $ai_analysis
  * @property bool $is_paid
- * @property string|null $stripe_payment_id
+ * @property string|null $paddle_payment_id
  * @property \Illuminate\Support\Carbon|null $paid_at
  * @property string|null $ip_address
  * @property string|null $error_message
@@ -44,6 +45,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Analysis extends Model
 {
+    /** @use HasFactory<AnalysisFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -59,7 +61,7 @@ class Analysis extends Model
         'github_data',
         'ai_analysis',
         'is_paid',
-        'stripe_payment_id',
+        'paddle_payment_id',
         'paid_at',
         'ip_address',
         'error_message',
@@ -129,7 +131,15 @@ class Analysis extends Model
     protected function dealBreakers(): Attribute
     {
         return Attribute::make(
-            get: fn (): array => $this->ai_analysis['deal_breakers'] ?? [],
+            get: function (): array {
+                $aiAnalysis = $this->ai_analysis;
+                if (! is_array($aiAnalysis)) {
+                    return [];
+                }
+                $dealBreakers = $aiAnalysis['deal_breakers'] ?? [];
+
+                return is_array($dealBreakers) ? $dealBreakers : [];
+            },
         );
     }
 
@@ -139,7 +149,15 @@ class Analysis extends Model
     protected function improvementChecklist(): Attribute
     {
         return Attribute::make(
-            get: fn (): array => $this->ai_analysis['improvement_checklist'] ?? [],
+            get: function (): array {
+                $aiAnalysis = $this->ai_analysis;
+                if (! is_array($aiAnalysis)) {
+                    return [];
+                }
+                $checklist = $aiAnalysis['improvement_checklist'] ?? [];
+
+                return is_array($checklist) ? $checklist : [];
+            },
         );
     }
 
@@ -149,7 +167,15 @@ class Analysis extends Model
     protected function strengths(): Attribute
     {
         return Attribute::make(
-            get: fn (): array => $this->ai_analysis['strengths'] ?? [],
+            get: function (): array {
+                $aiAnalysis = $this->ai_analysis;
+                if (! is_array($aiAnalysis)) {
+                    return [];
+                }
+                $strengths = $aiAnalysis['strengths'] ?? [];
+
+                return is_array($strengths) ? $strengths : [];
+            },
         );
     }
 
@@ -234,11 +260,11 @@ class Analysis extends Model
         ]);
     }
 
-    public function unlock(string $stripePaymentId): void
+    public function unlock(string $paddlePaymentId): void
     {
         $this->update([
             'is_paid' => true,
-            'stripe_payment_id' => $stripePaymentId,
+            'paddle_payment_id' => $paddlePaymentId,
             'paid_at' => now(),
         ]);
     }

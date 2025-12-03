@@ -21,9 +21,12 @@ class AnthropicConnector extends Connector
      */
     protected function defaultHeaders(): array
     {
+        /** @var string $apiKey */
+        $apiKey = config('services.anthropic.api_key', '');
+
         return [
             'anthropic-version' => '2023-06-01',
-            'x-api-key' => config('services.anthropic.api_key', ''),
+            'x-api-key' => $apiKey,
         ];
     }
 

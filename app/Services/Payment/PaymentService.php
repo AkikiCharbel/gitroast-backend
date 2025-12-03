@@ -26,12 +26,16 @@ class PaymentService
 
     public function __construct()
     {
-        $environment = config('services.paddle.sandbox', false)
+        $sandbox = config('services.paddle.sandbox', false);
+        $environment = $sandbox === true || $sandbox === 'true'
             ? Environment::SANDBOX
             : Environment::PRODUCTION;
 
+        /** @var string $apiKey */
+        $apiKey = config('services.paddle.api_key', '');
+
         $this->client = new PaddleClient(
-            apiKey: config('services.paddle.api_key', ''),
+            apiKey: $apiKey,
             options: new Options($environment),
         );
     }
@@ -43,11 +47,14 @@ class PaymentService
         }
 
         try {
+            /** @var string $priceId */
+            $priceId = config('services.paddle.price_full_report', '');
+
             $transaction = $this->client->transactions->create(
                 new CreateTransaction(
                     items: [
                         new TransactionCreateItem(
-                            priceId: (string) config('services.paddle.price_full_report'),
+                            priceId: $priceId,
                             quantity: 1,
                         ),
                     ],
@@ -85,12 +92,16 @@ class PaymentService
 
     private function buildCheckoutUrl(Transaction $transaction, Analysis $analysis): string
     {
-        $baseUrl = config('services.paddle.sandbox', false)
+        $sandbox = config('services.paddle.sandbox', false);
+        $baseUrl = $sandbox === true || $sandbox === 'true'
             ? 'https://sandbox-checkout.paddle.com/checkout/custom'
             : 'https://checkout.paddle.com/checkout/custom';
 
-        $successUrl = config('app.frontend_url').'/success?transaction_id='.$transaction->id;
-        $cancelUrl = config('app.frontend_url')."/analyze/{$analysis->uuid}";
+        /** @var string $frontendUrl */
+        $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
+
+        $successUrl = $frontendUrl.'/success?transaction_id='.$transaction->id;
+        $cancelUrl = $frontendUrl."/analyze/{$analysis->uuid}";
 
         return $baseUrl.'?'.http_build_query([
             'transaction_id' => $transaction->id,
@@ -102,6 +113,7 @@ class PaymentService
     public function handleWebhook(string $payload, string $signature): void
     {
         // Verify webhook signature
+        /** @var string $webhookSecret */
         $webhookSecret = config('services.paddle.webhook_secret', '');
 
         if ($webhookSecret !== '') {
@@ -134,18 +146,34 @@ class PaymentService
      */
     private function handleTransactionCompleted(array $data): void
     {
-        $transactionData = $data['data'] ?? [];
-        $transactionId = $transactionData['id'] ?? '';
-        $customData = $transactionData['custom_data'] ?? [];
-        $details = $transactionData['details'] ?? [];
-        $totals = $details['totals'] ?? [];
+        /** @var array<string, mixed> $transactionData */
+        $transactionData = isset($data['data']) && is_array($data['data']) ? $data['data'] : [];
+
+        $transactionId = isset($transactionData['id']) && is_string($transactionData['id'])
+            ? $transactionData['id']
+            : '';
+
+        /** @var array<string, mixed> $customData */
+        $customData = isset($transactionData['custom_data']) && is_array($transactionData['custom_data'])
+            ? $transactionData['custom_data']
+            : [];
+
+        /** @var array<string, mixed> $details */
+        $details = isset($transactionData['details']) && is_array($transactionData['details'])
+            ? $transactionData['details']
+            : [];
+
+        /** @var array<string, mixed> $totals */
+        $totals = isset($details['totals']) && is_array($details['totals'])
+            ? $details['totals']
+            : [];
 
         $payment = Payment::where('paddle_transaction_id', $transactionId)->first();
 
         if (! $payment) {
             // Try to find by analysis_id from custom_data
             $analysisId = $customData['analysis_id'] ?? null;
-            if ($analysisId) {
+            if ($analysisId !== null && is_numeric($analysisId)) {
                 $payment = Payment::where('analysis_id', (int) $analysisId)
                     ->where('status', 'pending')
                     ->first();
@@ -157,12 +185,20 @@ class PaymentService
         }
 
         // Get customer email from billing details
-        $billingDetails = $transactionData['billing_details'] ?? [];
-        $customerEmail = $billingDetails['email'] ?? null;
+        /** @var array<string, mixed> $billingDetails */
+        $billingDetails = isset($transactionData['billing_details']) && is_array($transactionData['billing_details'])
+            ? $transactionData['billing_details']
+            : [];
+        $customerEmail = isset($billingDetails['email']) && is_string($billingDetails['email'])
+            ? $billingDetails['email']
+            : null;
 
         // Get amount in cents
-        $amountCents = (int) ($totals['grand_total'] ?? 0);
-        $currency = strtoupper((string) ($transactionData['currency_code'] ?? 'USD'));
+        $grandTotal = $totals['grand_total'] ?? 0;
+        $amountCents = is_numeric($grandTotal) ? (int) $grandTotal : 0;
+
+        $currencyCode = $transactionData['currency_code'] ?? 'USD';
+        $currency = is_string($currencyCode) ? strtoupper($currencyCode) : 'USD';
 
         $payment->update([
             'status' => 'completed',
@@ -180,8 +216,12 @@ class PaymentService
      */
     private function handleTransactionFailed(array $data): void
     {
-        $transactionData = $data['data'] ?? [];
-        $transactionId = $transactionData['id'] ?? '';
+        /** @var array<string, mixed> $transactionData */
+        $transactionData = isset($data['data']) && is_array($data['data']) ? $data['data'] : [];
+
+        $transactionId = isset($transactionData['id']) && is_string($transactionData['id'])
+            ? $transactionData['id']
+            : '';
 
         $payment = Payment::where('paddle_transaction_id', $transactionId)->first();
 

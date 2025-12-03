@@ -18,31 +18,36 @@ class FullAnalysisResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var Analysis $this */
+        /** @var Analysis $analysis */
+        $analysis = $this->resource;
+
+        /** @var array<string, mixed> $aiAnalysis */
+        $aiAnalysis = is_array($analysis->ai_analysis) ? $analysis->ai_analysis : [];
+
         return [
-            'id' => $this->uuid,
-            'username' => $this->github_username,
-            'status' => $this->status->value,
-            'overall_score' => $this->overall_score,
+            'id' => $analysis->uuid,
+            'username' => $analysis->github_username,
+            'status' => $analysis->status->value,
+            'overall_score' => $analysis->overall_score,
             'score_level' => [
-                'name' => $this->score_level->value,
-                'label' => $this->score_level->label(),
-                'color' => $this->score_level->color(),
-                'description' => $this->score_level->description(),
+                'name' => $analysis->score_level->value,
+                'label' => $analysis->score_level->label(),
+                'color' => $analysis->score_level->color(),
+                'description' => $analysis->score_level->description(),
             ],
-            'category_scores' => $this->category_scores,
-            'summary' => $this->ai_analysis['summary'] ?? null,
-            'first_impression' => $this->ai_analysis['first_impression'] ?? null,
-            'recruiter_perspective' => $this->ai_analysis['recruiter_perspective'] ?? null,
-            'categories' => $this->ai_analysis['categories'] ?? [],
-            'deal_breakers' => $this->ai_analysis['deal_breakers'] ?? [],
-            'strengths' => $this->ai_analysis['strengths'] ?? [],
-            'top_projects_analysis' => $this->ai_analysis['top_projects_analysis'] ?? [],
-            'improvement_checklist' => $this->ai_analysis['improvement_checklist'] ?? [],
-            'github_data' => $this->github_data,
-            'is_paid' => $this->is_paid,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'completed_at' => $this->completed_at?->toIso8601String(),
+            'category_scores' => $analysis->category_scores,
+            'summary' => $aiAnalysis['summary'] ?? null,
+            'first_impression' => $aiAnalysis['first_impression'] ?? null,
+            'recruiter_perspective' => $aiAnalysis['recruiter_perspective'] ?? null,
+            'categories' => $aiAnalysis['categories'] ?? [],
+            'deal_breakers' => $aiAnalysis['deal_breakers'] ?? [],
+            'strengths' => $aiAnalysis['strengths'] ?? [],
+            'top_projects_analysis' => $aiAnalysis['top_projects_analysis'] ?? [],
+            'improvement_checklist' => $aiAnalysis['improvement_checklist'] ?? [],
+            'github_data' => $analysis->github_data,
+            'is_paid' => $analysis->is_paid,
+            'created_at' => $analysis->created_at->toIso8601String(),
+            'completed_at' => $analysis->completed_at?->toIso8601String(),
         ];
     }
 }

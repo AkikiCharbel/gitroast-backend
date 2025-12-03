@@ -18,50 +18,52 @@ class AnalysisResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var Analysis $this */
-        $isPaid = $this->is_paid;
+        /** @var Analysis $analysis */
+        $analysis = $this->resource;
+        $isPaid = $analysis->is_paid;
+        $isCompleted = $analysis->status->value === 'completed';
+
+        /** @var array<string, mixed> $aiAnalysis */
+        $aiAnalysis = is_array($analysis->ai_analysis) ? $analysis->ai_analysis : [];
+
+        /** @var array<int, mixed> $dealBreakers */
+        $dealBreakers = isset($aiAnalysis['deal_breakers']) && is_array($aiAnalysis['deal_breakers'])
+            ? $aiAnalysis['deal_breakers']
+            : [];
+
+        /** @var array<int, mixed> $strengths */
+        $strengths = isset($aiAnalysis['strengths']) && is_array($aiAnalysis['strengths'])
+            ? $aiAnalysis['strengths']
+            : [];
 
         return [
-            'id' => $this->uuid,
-            'username' => $this->github_username,
-            'status' => $this->status->value,
-            'overall_score' => $this->overall_score,
+            'id' => $analysis->uuid,
+            'username' => $analysis->github_username,
+            'status' => $analysis->status->value,
+            'overall_score' => $analysis->overall_score,
             'score_level' => [
-                'name' => $this->score_level->value,
-                'label' => $this->score_level->label(),
-                'color' => $this->score_level->color(),
+                'name' => $analysis->score_level->value,
+                'label' => $analysis->score_level->label(),
+                'color' => $analysis->score_level->color(),
             ],
-            'category_scores' => $this->when(
-                $this->status->value === 'completed',
-                $this->category_scores
-            ),
-            'summary' => $this->when(
-                $this->status->value === 'completed',
-                $this->ai_analysis['summary'] ?? null
-            ),
-            'first_impression' => $this->when(
-                $this->status->value === 'completed',
-                $this->ai_analysis['first_impression'] ?? null
-            ),
+            'category_scores' => $this->when($isCompleted, fn () => $analysis->category_scores),
+            'summary' => $this->when($isCompleted, fn () => $aiAnalysis['summary'] ?? null),
+            'first_impression' => $this->when($isCompleted, fn () => $aiAnalysis['first_impression'] ?? null),
             'deal_breakers' => $this->when(
-                $this->status->value === 'completed',
-                fn () => $isPaid
-                    ? ($this->ai_analysis['deal_breakers'] ?? [])
-                    : array_slice($this->ai_analysis['deal_breakers'] ?? [], 0, 3)
+                $isCompleted,
+                fn () => $isPaid ? $dealBreakers : array_slice($dealBreakers, 0, 3)
             ),
             'strengths' => $this->when(
-                $this->status->value === 'completed',
-                fn () => $isPaid
-                    ? ($this->ai_analysis['strengths'] ?? [])
-                    : array_slice($this->ai_analysis['strengths'] ?? [], 0, 2)
+                $isCompleted,
+                fn () => $isPaid ? $strengths : array_slice($strengths, 0, 2)
             ),
             'improvement_checklist' => $this->when(
-                $isPaid && $this->status->value === 'completed',
-                $this->ai_analysis['improvement_checklist'] ?? []
+                $isPaid && $isCompleted,
+                fn () => $aiAnalysis['improvement_checklist'] ?? []
             ),
             'is_paid' => $isPaid,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'completed_at' => $this->completed_at?->toIso8601String(),
+            'created_at' => $analysis->created_at->toIso8601String(),
+            'completed_at' => $analysis->completed_at?->toIso8601String(),
         ];
     }
 }

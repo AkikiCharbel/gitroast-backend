@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\AnalysisRequestFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AnalysisRequest extends Model
 {
+    /** @use HasFactory<AnalysisRequestFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -60,12 +62,14 @@ class AnalysisRequest extends Model
             ->where('last_request_at', '>=', now()->subHours($withinHours))
             ->first();
 
-        return $request?->request_count ?? 0;
+        return $request instanceof self ? $request->request_count : 0;
     }
 
     public static function pruneOld(int $olderThanHours = 24): int
     {
-        return self::where('last_request_at', '<', now()->subHours($olderThanHours))
+        $result = self::where('last_request_at', '<', now()->subHours($olderThanHours))
             ->delete();
+
+        return is_int($result) ? $result : 0;
     }
 }

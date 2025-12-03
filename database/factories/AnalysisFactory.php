@@ -34,7 +34,7 @@ class AnalysisFactory extends Factory
             'github_data' => null,
             'ai_analysis' => null,
             'is_paid' => false,
-            'stripe_payment_id' => null,
+            'paddle_payment_id' => null,
             'paid_at' => null,
             'ip_address' => fake()->ipv4(),
             'error_message' => null,
@@ -148,7 +148,7 @@ class AnalysisFactory extends Factory
     {
         return $this->completed()->state(fn (array $attributes): array => [
             'is_paid' => true,
-            'stripe_payment_id' => 'pi_'.Str::random(24),
+            'paddle_payment_id' => 'txn_'.Str::random(24),
             'paid_at' => now(),
         ]);
     }

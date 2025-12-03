@@ -29,9 +29,15 @@ class AnalyzeProfileRequest extends Request implements HasBody
      */
     protected function defaultBody(): array
     {
+        /** @var string $model */
+        $model = config('services.anthropic.model', 'claude-sonnet-4-20250514');
+
+        $maxTokens = config('services.anthropic.max_tokens', 4096);
+        $maxTokensInt = is_numeric($maxTokens) ? (int) $maxTokens : 4096;
+
         return [
-            'model' => config('services.anthropic.model', 'claude-sonnet-4-20250514'),
-            'max_tokens' => (int) config('services.anthropic.max_tokens', 4096),
+            'model' => $model,
+            'max_tokens' => $maxTokensInt,
             'system' => $this->getSystemPrompt(),
             'messages' => [
                 [

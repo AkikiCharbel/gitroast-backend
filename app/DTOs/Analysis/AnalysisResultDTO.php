@@ -32,7 +32,7 @@ class AnalysisResultDTO extends Data
      */
     public static function fromArray(array $data): self
     {
-        $overallScore = isset($data['overall_score']) ? (int) $data['overall_score'] : 0;
+        $overallScore = isset($data['overall_score']) && is_numeric($data['overall_score']) ? (int) $data['overall_score'] : 0;
         $summary = isset($data['summary']) && is_string($data['summary']) ? $data['summary'] : '';
         $firstImpression = isset($data['first_impression']) && is_string($data['first_impression']) ? $data['first_impression'] : '';
 

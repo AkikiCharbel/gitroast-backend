@@ -18,18 +18,20 @@ class AnalysisStatusResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var Analysis $this */
+        /** @var Analysis $analysis */
+        $analysis = $this->resource;
+
         return [
-            'id' => $this->uuid,
-            'status' => $this->status->value,
-            'progress' => $this->status->progress(),
+            'id' => $analysis->uuid,
+            'status' => $analysis->status->value,
+            'progress' => $analysis->status->progress(),
             'redirect' => $this->when(
-                $this->status->value === 'completed',
-                "/analysis/{$this->uuid}"
+                $analysis->status->value === 'completed',
+                fn () => "/analysis/{$analysis->uuid}"
             ),
             'error' => $this->when(
-                $this->status->value === 'failed',
-                $this->error_message
+                $analysis->status->value === 'failed',
+                fn () => $analysis->error_message
             ),
         ];
     }

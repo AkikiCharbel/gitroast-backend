@@ -6,21 +6,9 @@ parameters:
         - app/
         - database/factories/
 
-    # Starting at level 8, work towards level 10
-    # See docs/BLOCKERS.md for known type issues
-    level: 8
+    level: 10
 
-    ignoreErrors:
-        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder#'
-        - '#Unable to resolve the template type TRelatedModel in call to method#'
-        - '#Access to an undefined property Stripe\\StripeObject#'
-        - '#Access to an undefined property object::#'
-        - '#generic trait.*HasFactory.*does not specify its types#'
-        - '#nullsafe.*is unnecessary#'
-        - '#PHPDoc tag @var with type App\\Models\\Analysis is not subtype#'
-        - '#Parameter .* of method .*::when\(\) expects#'
-        - '#function number_format expects float#'
-        - '#Using nullsafe method call on non-nullable type#'
+    ignoreErrors: []
 
     excludePaths:
         - app/Providers/Filament/

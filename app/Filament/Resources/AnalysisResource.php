@@ -224,6 +224,6 @@ class AnalysisResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::where('status', AnalysisStatus::PENDING)->count();
+        return (string) Analysis::where('status', AnalysisStatus::PENDING)->count();
     }
 }

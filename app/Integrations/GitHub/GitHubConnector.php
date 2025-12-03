@@ -21,13 +21,16 @@ class GitHubConnector extends Connector
      */
     protected function defaultHeaders(): array
     {
+        /** @var string $apiVersion */
+        $apiVersion = config('services.github.api_version', '2022-11-28');
+
         $headers = [
             'Accept' => 'application/vnd.github+json',
-            'X-GitHub-Api-Version' => config('services.github.api_version', '2022-11-28'),
+            'X-GitHub-Api-Version' => $apiVersion,
         ];
 
         $token = config('services.github.token');
-        if ($token) {
+        if (is_string($token) && $token !== '') {
             $headers['Authorization'] = 'Bearer '.$token;
         }
 

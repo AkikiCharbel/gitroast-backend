@@ -38,7 +38,7 @@ class AnalysisStatsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-currency-dollar')
                 ->color('warning'),
 
-            Stat::make('Average Score', $averageScore ? number_format($averageScore, 1) : 'N/A')
+            Stat::make('Average Score', is_numeric($averageScore) ? number_format((float) $averageScore, 1) : 'N/A')
                 ->description('Overall score')
                 ->descriptionIcon('heroicon-m-star')
                 ->color('info'),

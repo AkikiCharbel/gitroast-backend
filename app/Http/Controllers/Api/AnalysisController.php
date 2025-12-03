@@ -36,8 +36,11 @@ class AnalysisController extends Controller
 
         AnalysisRequest::incrementForIp($ipAddress);
 
+        /** @var string $username */
+        $username = $request->validated('username');
+
         $dto = new CreateAnalysisDTO(
-            username: $request->validated('username'),
+            username: $username,
             ipAddress: $ipAddress,
         );
 
@@ -48,7 +51,7 @@ class AnalysisController extends Controller
                 'id' => $analysis->uuid,
                 'username' => $analysis->github_username,
                 'status' => $analysis->status->value,
-                'created_at' => $analysis->created_at?->toIso8601String(),
+                'created_at' => $analysis->created_at->toIso8601String(),
             ],
             'links' => [
                 'self' => url("/api/analysis/{$analysis->uuid}"),
