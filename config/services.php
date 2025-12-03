@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+        'api_version' => env('GITHUB_API_VERSION', '2022-11-28'),
+    ],
+
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+        'max_tokens' => env('ANTHROPIC_MAX_TOKENS', 4096),
+    ],
+
+    'paddle' => [
+        'api_key' => env('PADDLE_API_KEY'),
+        'webhook_secret' => env('PADDLE_WEBHOOK_SECRET'),
+        'price_full_report' => env('PADDLE_PRICE_FULL_REPORT'),
+        'sandbox' => env('PADDLE_SANDBOX', true),
+    ],
+
 ];

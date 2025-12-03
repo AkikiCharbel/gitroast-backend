@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - database/factories/
+
+    level: 10
+
+    ignoreErrors: []
+
+    excludePaths:
+        - app/Providers/Filament/
+
+    reportUnmatchedIgnoredErrors: false
