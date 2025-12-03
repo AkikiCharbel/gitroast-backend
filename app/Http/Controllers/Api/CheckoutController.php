@@ -43,7 +43,7 @@ class CheckoutController extends Controller
 
             return response()->json([
                 'data' => [
-                    'session_id' => $session->sessionId,
+                    'transaction_id' => $session->sessionId,
                     'checkout_url' => $session->checkoutUrl,
                 ],
             ]);
@@ -56,11 +56,11 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Verify a payment.
+     * Verify a payment by transaction ID.
      */
-    public function verify(string $sessionId): JsonResponse
+    public function verify(string $transactionId): JsonResponse
     {
-        $isPaid = $this->paymentService->verifyPayment($sessionId);
+        $isPaid = $this->paymentService->verifyPayment($transactionId);
 
         return response()->json([
             'data' => [

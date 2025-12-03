@@ -8,16 +8,32 @@ use App\DTOs\Payment\CheckoutSessionDTO;
 use App\Exceptions\PaymentException;
 use App\Models\Analysis;
 use App\Models\Payment;
-use Stripe\Checkout\Session;
-use Stripe\Exception\ApiErrorException;
-use Stripe\Stripe;
-use Stripe\Webhook;
+use Paddle\SDK\Client as PaddleClient;
+use Paddle\SDK\Entities\Shared\CustomData;
+use Paddle\SDK\Entities\Transaction;
+use Paddle\SDK\Environment;
+use Paddle\SDK\Exceptions\ApiError;
+use Paddle\SDK\Exceptions\SdkException;
+use Paddle\SDK\Notifications\PaddleSignature;
+use Paddle\SDK\Notifications\Secret;
+use Paddle\SDK\Options;
+use Paddle\SDK\Resources\Transactions\Operations\Create\TransactionCreateItem;
+use Paddle\SDK\Resources\Transactions\Operations\CreateTransaction;
 
 class PaymentService
 {
+    private PaddleClient $client;
+
     public function __construct()
     {
-        Stripe::setApiKey(config('services.stripe.secret', ''));
+        $environment = config('services.paddle.sandbox', false)
+            ? Environment::SANDBOX
+            : Environment::PRODUCTION;
+
+        $this->client = new PaddleClient(
+            apiKey: config('services.paddle.api_key', ''),
+            options: new Options($environment),
+        );
     }
 
     public function createCheckoutSession(Analysis $analysis): CheckoutSessionDTO
@@ -27,36 +43,39 @@ class PaymentService
         }
 
         try {
-            $session = Session::create([
-                'payment_method_types' => ['card'],
-                'line_items' => [[
-                    'price' => config('services.stripe.price_full_report'),
-                    'quantity' => 1,
-                ]],
-                'mode' => 'payment',
-                'success_url' => config('app.frontend_url').'/success?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => config('app.frontend_url')."/analyze/{$analysis->uuid}",
-                'metadata' => [
-                    'analysis_id' => $analysis->id,
-                    'analysis_uuid' => $analysis->uuid,
-                    'github_username' => $analysis->github_username,
-                ],
-                'client_reference_id' => $analysis->uuid,
-            ]);
+            $transaction = $this->client->transactions->create(
+                new CreateTransaction(
+                    items: [
+                        new TransactionCreateItem(
+                            priceId: (string) config('services.paddle.price_full_report'),
+                            quantity: 1,
+                        ),
+                    ],
+                    customData: new CustomData([
+                        'analysis_id' => (string) $analysis->id,
+                        'analysis_uuid' => $analysis->uuid,
+                        'github_username' => $analysis->github_username,
+                    ]),
+                )
+            );
 
+            // Create pending payment record
             Payment::create([
                 'analysis_id' => $analysis->id,
-                'stripe_session_id' => $session->id,
-                'amount_cents' => $session->amount_total ?? 0,
-                'currency' => strtoupper($session->currency ?? 'USD'),
+                'paddle_transaction_id' => $transaction->id,
+                'amount_cents' => 0, // Will be updated on webhook
+                'currency' => 'USD',
                 'status' => 'pending',
             ]);
 
+            // Build checkout URL
+            $checkoutUrl = $this->buildCheckoutUrl($transaction, $analysis);
+
             return new CheckoutSessionDTO(
-                sessionId: $session->id,
-                checkoutUrl: $session->url ?? '',
+                sessionId: $transaction->id,
+                checkoutUrl: $checkoutUrl,
             );
-        } catch (ApiErrorException $e) {
+        } catch (ApiError|SdkException $e) {
             throw new PaymentException(
                 "Failed to create checkout session: {$e->getMessage()}",
                 previous: $e
@@ -64,73 +83,131 @@ class PaymentService
         }
     }
 
+    private function buildCheckoutUrl(Transaction $transaction, Analysis $analysis): string
+    {
+        $baseUrl = config('services.paddle.sandbox', false)
+            ? 'https://sandbox-checkout.paddle.com/checkout/custom'
+            : 'https://checkout.paddle.com/checkout/custom';
+
+        $successUrl = config('app.frontend_url').'/success?transaction_id='.$transaction->id;
+        $cancelUrl = config('app.frontend_url')."/analyze/{$analysis->uuid}";
+
+        return $baseUrl.'?'.http_build_query([
+            'transaction_id' => $transaction->id,
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+        ]);
+    }
+
     public function handleWebhook(string $payload, string $signature): void
     {
-        try {
-            $event = Webhook::constructEvent(
-                $payload,
-                $signature,
-                config('services.stripe.webhook_secret', '')
-            );
-        } catch (\Exception $e) {
-            throw new PaymentException("Webhook signature verification failed: {$e->getMessage()}");
+        // Verify webhook signature
+        $webhookSecret = config('services.paddle.webhook_secret', '');
+
+        if ($webhookSecret !== '') {
+            try {
+                $paddleSignature = PaddleSignature::parse($signature);
+                $secret = new Secret($webhookSecret);
+
+                if (! $paddleSignature->verify($payload, $secret)) {
+                    throw new PaymentException('Webhook signature verification failed');
+                }
+            } catch (\Exception $e) {
+                throw new PaymentException("Webhook verification error: {$e->getMessage()}");
+            }
         }
 
-        match ($event->type) {
-            'checkout.session.completed' => $this->handleCheckoutCompleted($event->data->object),
-            'payment_intent.succeeded' => $this->handlePaymentSucceeded($event->data->object),
-            'payment_intent.payment_failed' => $this->handlePaymentFailed($event->data->object),
+        /** @var array<string, mixed> $data */
+        $data = json_decode($payload, true);
+
+        $eventType = $data['event_type'] ?? '';
+
+        match ($eventType) {
+            'transaction.completed' => $this->handleTransactionCompleted($data),
+            'transaction.payment_failed' => $this->handleTransactionFailed($data),
             default => null,
         };
     }
 
-    private function handleCheckoutCompleted(Session $session): void
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function handleTransactionCompleted(array $data): void
     {
-        $payment = Payment::where('stripe_session_id', $session->id)->first();
+        $transactionData = $data['data'] ?? [];
+        $transactionId = $transactionData['id'] ?? '';
+        $customData = $transactionData['custom_data'] ?? [];
+        $details = $transactionData['details'] ?? [];
+        $totals = $details['totals'] ?? [];
+
+        $payment = Payment::where('paddle_transaction_id', $transactionId)->first();
+
+        if (! $payment) {
+            // Try to find by analysis_id from custom_data
+            $analysisId = $customData['analysis_id'] ?? null;
+            if ($analysisId) {
+                $payment = Payment::where('analysis_id', (int) $analysisId)
+                    ->where('status', 'pending')
+                    ->first();
+            }
+        }
 
         if (! $payment) {
             return;
         }
 
+        // Get customer email from billing details
+        $billingDetails = $transactionData['billing_details'] ?? [];
+        $customerEmail = $billingDetails['email'] ?? null;
+
+        // Get amount in cents
+        $amountCents = (int) ($totals['grand_total'] ?? 0);
+        $currency = strtoupper((string) ($transactionData['currency_code'] ?? 'USD'));
+
         $payment->update([
             'status' => 'completed',
-            'stripe_payment_intent' => $session->payment_intent,
-            'customer_email' => $session->customer_details?->email,
+            'paddle_transaction_id' => $transactionId,
+            'amount_cents' => $amountCents,
+            'currency' => $currency,
+            'customer_email' => $customerEmail,
         ]);
 
-        $payment->analysis->unlock((string) $session->payment_intent);
+        $payment->analysis->unlock($transactionId);
     }
 
-    private function handlePaymentSucceeded(object $paymentIntent): void
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function handleTransactionFailed(array $data): void
     {
-        /** @var string $paymentIntentId */
-        $paymentIntentId = $paymentIntent->id;
+        $transactionData = $data['data'] ?? [];
+        $transactionId = $transactionData['id'] ?? '';
 
-        $payment = Payment::where('stripe_payment_intent', $paymentIntentId)->first();
-
-        if ($payment && $payment->status->value !== 'completed') {
-            $payment->markAsCompleted($paymentIntentId);
-        }
-    }
-
-    private function handlePaymentFailed(object $paymentIntent): void
-    {
-        /** @var string $paymentIntentId */
-        $paymentIntentId = $paymentIntent->id;
-
-        $payment = Payment::where('stripe_payment_intent', $paymentIntentId)->first();
+        $payment = Payment::where('paddle_transaction_id', $transactionId)->first();
 
         $payment?->markAsFailed();
     }
 
-    public function verifyPayment(string $sessionId): bool
+    public function verifyPayment(string $transactionId): bool
     {
         try {
-            $session = Session::retrieve($sessionId);
+            $transaction = $this->client->transactions->get($transactionId);
 
-            return $session->payment_status === 'paid';
-        } catch (ApiErrorException) {
+            return $transaction->status->getValue() === 'completed';
+        } catch (ApiError|SdkException) {
             return false;
+        }
+    }
+
+    /**
+     * Get transaction details from Paddle.
+     */
+    public function getTransaction(string $transactionId): ?Transaction
+    {
+        try {
+            return $this->client->transactions->get($transactionId);
+        } catch (ApiError|SdkException) {
+            return null;
         }
     }
 }

@@ -25,8 +25,8 @@ Route::prefix('analysis')->group(function (): void {
 // Checkout endpoints
 Route::prefix('checkout')->group(function (): void {
     Route::post('/create', [CheckoutController::class, 'create'])->name('checkout.create');
-    Route::get('/verify/{sessionId}', [CheckoutController::class, 'verify'])->name('checkout.verify');
+    Route::get('/verify/{transactionId}', [CheckoutController::class, 'verify'])->name('checkout.verify');
 });
 
 // Webhooks (no CSRF)
-Route::post('/webhooks/stripe', [WebhookController::class, 'stripe'])->name('webhooks.stripe');
+Route::post('/webhooks/paddle', [WebhookController::class, 'paddle'])->name('webhooks.paddle');

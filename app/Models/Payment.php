@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property int $id
  * @property int $analysis_id
- * @property string $stripe_session_id
- * @property string|null $stripe_payment_intent
+ * @property string $paddle_transaction_id
+ * @property string|null $paddle_subscription_id
  * @property int $amount_cents
  * @property string $currency
  * @property PaymentStatus $status
@@ -29,8 +29,8 @@ class Payment extends Model
 
     protected $fillable = [
         'analysis_id',
-        'stripe_session_id',
-        'stripe_payment_intent',
+        'paddle_transaction_id',
+        'paddle_subscription_id',
         'amount_cents',
         'currency',
         'status',
@@ -83,14 +83,14 @@ class Payment extends Model
         return $query->where('status', PaymentStatus::FAILED);
     }
 
-    public function markAsCompleted(string $paymentIntent): void
+    public function markAsCompleted(string $transactionId): void
     {
         $this->update([
             'status' => PaymentStatus::COMPLETED,
-            'stripe_payment_intent' => $paymentIntent,
+            'paddle_transaction_id' => $transactionId,
         ]);
 
-        $this->analysis->unlock($paymentIntent);
+        $this->analysis->unlock($transactionId);
     }
 
     public function markAsFailed(): void

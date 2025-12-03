@@ -15,19 +15,22 @@ GITHUB_TOKEN=                    # GitHub Personal Access Token
 # Required - Claude AI
 ANTHROPIC_API_KEY=               # Anthropic API key
 
-# Required - Stripe Payments
-STRIPE_KEY=                      # Stripe publishable key
-STRIPE_SECRET=                   # Stripe secret key
-STRIPE_WEBHOOK_SECRET=           # Stripe webhook signing secret
-STRIPE_PRICE_FULL_REPORT=        # Stripe Price ID for full report
+# Required - Paddle Payments
+PADDLE_API_KEY=                  # Paddle API key
+PADDLE_WEBHOOK_SECRET=           # Paddle webhook secret
+PADDLE_PRICE_FULL_REPORT=        # Paddle Price ID for full report
+PADDLE_SANDBOX=true              # Set to false for production
 ```
 
-### 2. Stripe Product Setup
+### 2. Paddle Product Setup
 
-Create a product and price in Stripe Dashboard:
-1. Create product "GitRoast Full Report"
-2. Create a one-time price (e.g., $9.99)
-3. Copy the price ID to `STRIPE_PRICE_FULL_REPORT`
+Create a product and price in Paddle Dashboard:
+1. Go to Paddle Dashboard > Catalog > Products
+2. Create product "GitRoast Full Report"
+3. Create a one-time price (e.g., $9.99)
+4. Copy the price ID to `PADDLE_PRICE_FULL_REPORT`
+5. Set up webhook endpoint at `https://yourdomain.com/api/webhooks/paddle`
+6. Subscribe to `transaction.completed` and `transaction.payment_failed` events
 
 ### 3. Database Setup
 
@@ -143,7 +146,7 @@ The following type issues are currently ignored in `phpstan.neon`:
 
 1. **Resource `when()` method** - Laravel Resources have complex conditional logic
 2. **Nullsafe operators** - Using `?->` on non-nullable types (defensive coding)
-3. **Stripe types** - Stripe SDK has loose typing on event objects
+3. **Paddle types** - Paddle SDK entities have dynamic properties
 4. **Generic factory types** - HasFactory trait requires generic specification
 
 To fix these for level 10:
@@ -158,7 +161,7 @@ $this->created_at->toIso8601String()
 ## Frontend Integration
 
 The backend expects a frontend at `APP_FRONTEND_URL` for:
-- Stripe success/cancel redirects
+- Paddle success/cancel redirects
 - Analysis result pages
 
 Update `.env` with your frontend URL.
@@ -172,7 +175,8 @@ Update `.env` with your frontend URL.
 - [ ] Create admin user
 - [ ] Set up queue worker (Supervisor)
 - [ ] Configure Redis
-- [ ] Set up Stripe webhook endpoint
+- [ ] Set up Paddle webhook endpoint
+- [ ] Set `PADDLE_SANDBOX=false` for production
 - [ ] Configure HTTPS
 - [ ] Set up monitoring
 - [ ] Review rate limits

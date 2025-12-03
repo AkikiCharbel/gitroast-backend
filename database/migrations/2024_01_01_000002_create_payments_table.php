@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('analysis_id')->constrained()->cascadeOnDelete();
-            $table->string('stripe_session_id')->unique();
-            $table->string('stripe_payment_intent')->nullable();
+            $table->string('paddle_transaction_id')->unique();
+            $table->string('paddle_subscription_id')->nullable();
             $table->unsignedInteger('amount_cents');
             $table->string('currency', 3)->default('USD');
             $table->string('status', 20)->default(PaymentStatus::PENDING->value);
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Indexes
-            $table->index('stripe_payment_intent');
+            $table->index('paddle_transaction_id');
             $table->index('status');
         });
     }

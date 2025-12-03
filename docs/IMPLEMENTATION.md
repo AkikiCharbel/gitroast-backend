@@ -12,7 +12,7 @@ GitRoast is a GitHub profile analyzer that uses AI (Claude) to score and provide
 
 **Migrations created:**
 - `analyses` - Stores analysis data, scores, and AI results
-- `payments` - Tracks Stripe payment sessions
+- `payments` - Tracks Paddle payment transactions
 - `analysis_requests` - Rate limiting by IP address
 - User table updated with `is_admin` flag for Filament access
 
@@ -28,7 +28,7 @@ Located in `app/Enums/`:
 
 Located in `app/Models/`:
 - `Analysis` - Main analysis model with scopes, accessors, and methods
-- `Payment` - Payment tracking model with Stripe integration
+- `Payment` - Payment tracking model with Paddle integration
 - `AnalysisRequest` - Rate limiting model
 - `User` - Updated with `is_admin` for Filament access
 
@@ -39,7 +39,7 @@ Located in `app/DTOs/`:
 - `GitHubRepoDTO` - Repository information
 - `AnalysisResultDTO` - AI analysis results
 - `CreateAnalysisDTO` - Analysis creation input
-- `CheckoutSessionDTO` - Stripe checkout session
+- `CheckoutSessionDTO` - Paddle checkout session
 
 ### 5. API Integrations (Saloon)
 
@@ -62,7 +62,7 @@ Located in `app/Services/`:
 - `GitHubService` - Fetch and process GitHub profile data
 - `AIAnalysisService` - Send data to Claude for analysis
 - `ScoreCalculatorService` - Calculate weighted scores
-- `PaymentService` - Stripe checkout and webhook handling
+- `PaymentService` - Paddle checkout and webhook handling
 
 ### 7. Jobs
 
@@ -80,9 +80,9 @@ Located in `app/Http/Controllers/Api/`:
 | GET | `/api/analysis/{uuid}` | Get analysis result |
 | GET | `/api/analysis/{uuid}/status` | Get analysis status |
 | GET | `/api/analysis/{uuid}/full` | Get full report (paid only) |
-| POST | `/api/checkout/create` | Create Stripe checkout |
-| GET | `/api/checkout/verify/{sessionId}` | Verify payment |
-| POST | `/api/webhooks/stripe` | Handle Stripe webhooks |
+| POST | `/api/checkout/create` | Create Paddle checkout |
+| GET | `/api/checkout/verify/{transactionId}` | Verify payment |
+| POST | `/api/webhooks/paddle` | Handle Paddle webhooks |
 | GET | `/api/health` | Health check endpoint |
 
 ### 9. Filament Admin Panel
@@ -122,11 +122,11 @@ ANTHROPIC_API_KEY=your_anthropic_key
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ANTHROPIC_MAX_TOKENS=4096
 
-# Stripe Payments
-STRIPE_KEY=your_stripe_publishable_key
-STRIPE_SECRET=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_webhook_secret
-STRIPE_PRICE_FULL_REPORT=price_xxx
+# Paddle Payments
+PADDLE_API_KEY=your_paddle_api_key
+PADDLE_WEBHOOK_SECRET=your_webhook_secret
+PADDLE_PRICE_FULL_REPORT=pri_xxx
+PADDLE_SANDBOX=true
 
 # Frontend URL (for redirects)
 APP_FRONTEND_URL=http://localhost:3000

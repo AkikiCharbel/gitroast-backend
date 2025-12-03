@@ -17,19 +17,19 @@ class WebhookController extends Controller
     ) {}
 
     /**
-     * Handle Stripe webhook.
+     * Handle Paddle webhook.
      */
-    public function stripe(Request $request): JsonResponse
+    public function paddle(Request $request): JsonResponse
     {
         $payload = $request->getContent();
-        $signature = $request->header('Stripe-Signature', '');
+        $signature = $request->header('Paddle-Signature', '');
 
         try {
             $this->paymentService->handleWebhook($payload, $signature);
 
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
-            Log::error('Stripe webhook failed', [
+            Log::error('Paddle webhook failed', [
                 'error' => $e->getMessage(),
             ]);
 

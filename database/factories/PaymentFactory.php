@@ -24,8 +24,8 @@ class PaymentFactory extends Factory
     {
         return [
             'analysis_id' => Analysis::factory(),
-            'stripe_session_id' => 'cs_'.Str::random(24),
-            'stripe_payment_intent' => null,
+            'paddle_transaction_id' => 'txn_'.Str::random(24),
+            'paddle_subscription_id' => null,
             'amount_cents' => 999,
             'currency' => 'USD',
             'status' => PaymentStatus::PENDING,
@@ -44,7 +44,6 @@ class PaymentFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => PaymentStatus::COMPLETED,
-            'stripe_payment_intent' => 'pi_'.Str::random(24),
             'customer_email' => fake()->email(),
         ]);
     }

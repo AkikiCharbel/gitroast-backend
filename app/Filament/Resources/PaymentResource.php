@@ -33,10 +33,12 @@ class PaymentResource extends Resource
                             ->relationship('analysis', 'github_username')
                             ->required()
                             ->searchable(),
-                        Forms\Components\TextInput::make('stripe_session_id')
+                        Forms\Components\TextInput::make('paddle_transaction_id')
+                            ->label('Transaction ID')
                             ->required()
                             ->maxLength(255),
-                        Forms\Components\TextInput::make('stripe_payment_intent')
+                        Forms\Components\TextInput::make('paddle_subscription_id')
+                            ->label('Subscription ID')
                             ->maxLength(255),
                         Forms\Components\TextInput::make('amount_cents')
                             ->required()
@@ -68,7 +70,8 @@ class PaymentResource extends Resource
                     ->label('Username')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('stripe_session_id')
+                Tables\Columns\TextColumn::make('paddle_transaction_id')
+                    ->label('Transaction ID')
                     ->searchable()
                     ->limit(20)
                     ->copyable(),
